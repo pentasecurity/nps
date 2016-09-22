@@ -39,12 +39,9 @@ NPS(Network Packet Simulator) is tcp/ip packet testing tool.
 To install nps, simply:
 
     $ apt-get install python-pip
-    $ git clone [nps repository]
-    $ pip install -e .
-
+    $ pip install nps
 
 ## Quick Start
-
 
 	$ mkdir -p /opt/penta/nps/script/
     $ cd /opt/penta/nps/script/
