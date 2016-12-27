@@ -1,108 +1,113 @@
 # -*- coding: UTF-8 -*-
-
-SERVER_TO_CLIENT = "server"
-CLIENT_TO_SERVER = "client"
+from scapy.all import srp, Ether, ARP, conf
 
 
-class TcListInfo(object):
-    """서버와 클라이언트 각각에서 쓰이는 리스트 버퍼관련 핸들러"""
+class AccessibilityManager:
+    def __init__(self):
+        self._accessibilty_list = []
 
-    _packet_list = []
+    def add(self, obj):
+        self._accessibilty_list.append(obj)
 
-    #nat 관련 내용
-    #dut에서 생성 될 랜덤 포트 넘버 저장소
-    _nat_port = 0
-    _nat_magic_number = 99999
-    _use_nat_port = "False"
+    def get_list(self):
+        return self._accessibilty_list
 
-    #sniff 할 때 쓰이는 변수
-    _interface_name = ""  #ex)tp0, eth0, ...
-    _interface_mac_addr = "00:00:00:00:00:00"
-    _interface_ip_addr = ""
-    _interface_tcp_port = ""
-
-    #seq, ack 자동 채우기
-    _is_auto_fill_tcp_seq_ack = "False"
-    _start_tcp_seq = 0
-
-    def __init__(self, name):
-        self._packet_list = []
-        self.name = name
-
-    def get_name(self):
-        return self.name
-
-    #port
-    def set_interface_tcp_port(self, port):
-        self._interface_tcp_port = port
-
-    def get_interface_tcp_port(self):
-        return self._interface_tcp_port
-
-    #ip
-    def set_interface_ip_addr(self, ip):
-        self._interface_ip_addr = ip
-
-    def get_interface_ip_addr(self):
-        return self._interface_ip_addr
-
-    #tc(packet) list
-    def append_packet_list(self, packet_info):
-        self._packet_list.append(packet_info)
-
-    def reverse_packet_list(self):
-        self._packet_list.reverse()
-
-    def get_packet_list(self):
-        return self._packet_list
-
-    def is_empty_packet_list(self):
-        return (len(self._packet_list) == 0)
-
-    #interface
-    def set_interface(self, iface_name, iface_mac):
-        self._interface_name = iface_name
-        self._interface_mac_addr = iface_mac
-
-    def get_interface_name(self):
-        return self._interface_name
-
-    def get_interface_mac_addr(self):
-        return self._interface_mac_addr
-
-    #nat port
-    def set_use_nat_port(self, use_or_not):
-        self._use_nat_port = use_or_not
-
-    def get_use_nat_port(self):
-        return self._use_nat_port
-
-    def set_dut_nat_port(self, port):
-        self._nat_port = port
-
-    def get_dut_nat_port(self):
-        return self._nat_port
-
-    def get_nat_magic_number(self):
-        return self._nat_magic_number
-
-    #Auto fill seq, ack
-    def set_auto_fill_seq_ack(self, is_auto_fill):
-        self._is_auto_fill_tcp_seq_ack = is_auto_fill
-
-    def get_auto_fill_seq_ack(self):
-        return self._is_auto_fill_tcp_seq_ack
-
-    def set_start_tcp_seq(self, seq):
-        self._start_tcp_seq = seq
-
-    def get_start_tcp_seq(self):
-        return self._start_tcp_seq
+    def process(self):
+        for accessibilty in self._accessibilty_list:
+            accessibilty.process()
 
 
-class TcListAutoSeqAck(object):
+class AbstractAccessibilty:
+    def __init__(self):
+        self._verbose = False
 
-    def calc_tcp_seq(self, tc_list_info, my_seq, other_seq):
+    def process(self):
+        pass
+
+
+# TODO: create that consider port option(proxy configure)
+#
+# Server Simulation
+#  - server does not know tcp port of DUT
+#  - need ip/port learn function.
+
+
+class AddressBinder(AbstractAccessibilty):
+    def __init__(self, entity):
+        self._src_mac = "00:00:00:00:00:01"
+        self._src_ip = "1.1.1.1"
+        self._src_port = 12345
+        self._dest_mac = "00:00:00:00:00:02"
+        self._dest_ip = "2.2.2.2"
+        self._dest_port = 80
+
+        # server or client entity
+        self._network_entity = entity
+
+    def set_src_addr(self, src_mac, src_ip, src_port):
+        self._src_mac = src_mac
+        self._src_ip = src_ip
+        self._src_port = int(src_port)
+
+    def get_src_mac(self):
+        return self._src_mac
+
+    def get_src_ip(self):
+        return self._src_ip
+
+    def get_src_port(self):
+        return self._src_port
+
+    def set_dest_addr(self, dest_mac, dest_ip, dest_port):
+        self._dest_mac = dest_mac
+        self._dest_ip = dest_ip
+        self._dest_port = int(dest_port)
+
+    def get_dest_mac(self):
+        return self._dest_mac
+
+    def get_dest_ip(self):
+        return self._dest_ip
+
+    def get_dest_port(self):
+        return self._dest_port
+
+    def process(self):
+        for packet_buff in self._network_entity.get_packet_list():
+            if packet_buff.get_packet_action() == "send":
+                packet_buff.set_ether_datas(self._dest_mac, self._src_mac)
+                packet_buff.set_ip_addr(self._dest_ip, self._src_ip)
+                packet_buff.set_tcp_port_num(self._dest_port, self._src_port)
+            elif packet_buff.get_packet_action() == "recv":
+                # recv action
+                # change values of source and destination
+                packet_buff.set_ether_datas(self._src_mac, self._dest_mac)
+                packet_buff.set_ip_addr(self._src_ip, self._dest_ip)
+                packet_buff.set_tcp_port_num(self._src_port, self._dest_port)
+
+
+class TcListAutoSeqAck(AbstractAccessibilty):
+    def __init__(self, client_entity, server_entity=None):
+        self._client_entity = client_entity
+        self._server_entity = server_entity
+        self._client_start_seq = 0L
+        self._server_start_seq = 0L
+
+    def set_tcp_sequence(self, client_start_seq, server_start_seq):
+        self._client_start_seq = client_start_seq
+        self._server_start_seq = server_start_seq
+
+    def get_client_tcp_sequence(self):
+        return self._client_start_seq
+
+    def get_server_tcp_sequence(self):
+        return self._server_start_seq
+
+    def process(self):
+        self.calc_auto_tcp_seq_ack(self._client_entity, self._server_entity,
+                                   self._client_start_seq, self._server_start_seq)
+
+    def _calc_tcp_seq(self, tc_list_info, my_seq, other_seq):
         tc_list = tc_list_info.get_packet_list()
 
         # send는 본인의 seq를 다루고 recv는 받는 쪽의 seq를 다룬다.
@@ -252,7 +257,7 @@ class TcListAutoSeqAck(object):
                     else:
                         tc.set_tcp_seq(other_seq + 1)
 
-    def calc_tcp_ack_with_queue(self, total_recved, prev_tc_seq, prev_tc_flag_val, prev_tc_len, ack_queue):
+    def _calc_tcp_ack_with_queue(self, total_recved, prev_tc_seq, prev_tc_flag_val, prev_tc_len, ack_queue):
         """
         calc_ack_with_queue
 
@@ -323,14 +328,14 @@ class TcListAutoSeqAck(object):
     _recv_syn_flag = 0
     _recv_fin_flag = 0
 
-    def clear_tcp_flags(self):
+    def _clear_tcp_flags(self):
         #새롭게 ack를 계산할 때, 변수 초기화 할 때 쓰는 func.
         self._send_syn_flag = 0
         self._send_fin_flag = 0
         self._recv_syn_flag = 0
         self._recv_fin_flag = 0
 
-    def calc_tcp_flag_value(self, direction, flag):
+    def _calc_tcp_flag_value(self, direction, flag):
         #Flag에 의한 값을 계산할 때, 사용할 코드
         if direction == "send":
             if (flag == 'S' or flag == 'SA') and self._send_syn_flag == 0:
@@ -352,9 +357,9 @@ class TcListAutoSeqAck(object):
 
         return 0
 
-    def calc_tcp_ack(self, tc_list_info, my_seq, other_seq):
+    def _calc_tcp_ack(self, tc_list_info, my_seq, other_seq):
         #주의, 이전에 seq가 미리 다 계산 되어있다는 전제하에 작성 되었습니다.
-        self.clear_tcp_flags()
+        self._clear_tcp_flags()
         tc_list = tc_list_info.get_packet_list()
 
         send_tc_ack = other_seq
@@ -371,29 +376,29 @@ class TcListAutoSeqAck(object):
             act = tc.get_packet_action()
             if (act == "send"):
                 send_tc_ack = tc.set_tcp_ack(send_tc_ack)
-                recv_tc_ack = self.calc_tcp_ack_with_queue(
-                    recv_tc_ack, tc.get_tcp_seq(), self.calc_tcp_flag_value("send", tc.get_tcp_flag()),
+                recv_tc_ack = self._calc_tcp_ack_with_queue(
+                    recv_tc_ack, tc.get_tcp_seq(), self._calc_tcp_flag_value("send", tc.get_tcp_flag()),
                     tc.get_tcp_len(), recv_ack_queue)
 
             elif (act == "recv"):
                 recv_tc_ack = tc.set_tcp_ack(recv_tc_ack)
-                send_tc_ack = self.calc_tcp_ack_with_queue(
-                    send_tc_ack, tc.get_tcp_seq(), self.calc_tcp_flag_value("recv", tc.get_tcp_flag()),
+                send_tc_ack = self._calc_tcp_ack_with_queue(
+                    send_tc_ack, tc.get_tcp_seq(), self._calc_tcp_flag_value("recv", tc.get_tcp_flag()),
                     tc.get_tcp_len(), send_ack_queue)
 
     def calc_auto_tcp_seq_ack(self, client_tc_list_handler, server_tc_list_handler, client_start_seq, server_start_seq):
         #각각의 side 별로 "seq number"를 계산합니다.
-        self.calc_tcp_seq(client_tc_list_handler, long(client_start_seq), long(server_start_seq))
-        self.calc_tcp_seq(server_tc_list_handler, long(server_start_seq), long(client_start_seq))
+        self._calc_tcp_seq(client_tc_list_handler, long(client_start_seq), long(server_start_seq))
+        self._calc_tcp_seq(server_tc_list_handler, long(server_start_seq), long(client_start_seq))
 
         #각각의 side 별로 "ack number"를 계산합니다.
         #ack 계산시에 syn과 fin에대해 계산할때 쓰이는 멤버 flag 를 초기화하기위해
         #flag에 따른 가중치를 계산하는 함수가 분리되어있어서 멤버 변수로 쓰이는 값을 따로 관리하는데,
         #이 값을 초기화하는게 clearFlags() 함수 입니다.
-        self.clear_tcp_flags()
-        self.calc_tcp_ack(client_tc_list_handler, long(client_start_seq), long(server_start_seq))
-        self.clear_tcp_flags()
-        self.calc_tcp_ack(server_tc_list_handler, long(server_start_seq), long(client_start_seq))
+        self._clear_tcp_flags()
+        self._calc_tcp_ack(client_tc_list_handler, long(client_start_seq), long(server_start_seq))
+        self._clear_tcp_flags()
+        self._calc_tcp_ack(server_tc_list_handler, long(server_start_seq), long(client_start_seq))
 
         #debug code
         print client_tc_list_handler.get_name()
@@ -403,3 +408,84 @@ class TcListAutoSeqAck(object):
         print server_tc_list_handler.get_name()
         for packetInfo in server_tc_list_handler.get_packet_list():
             print 'server packet generated : ' + packetInfo._inner_value2str_s()
+
+
+class MacAddressHelper:
+    def __init__(self):
+        # TODO1: expire timer for aging mac addr
+        # TODO2: mac addr for ipv6(icmp)
+        self.mac_addr_cache = dict()
+
+    def get_interface_mac_addr(self, interface):
+        try:
+            with open('/sys/class/net/{0}/address'.format(interface), 'r') as f:
+                return f.read().replace('\n','')
+        except:
+            return None
+
+#    def _get_mac_addr_system_cache(self, ip):
+#        # Sample output
+#        # IP address       HW type     Flags       HW address            Mask     Device
+#        # 192.168.40.1     0x1         0x2         00:10:f3:30:39:89     *        eth0
+#        # 192.168.40.114   0x1         0x2         8e:9d:9d:35:35:e2     *        eth0
+#        f = open('/proc/net/arp', 'r')
+#
+#        mac_addr = None
+#        while True:
+#            line = f.readline()
+#            if not line:
+#                break
+#
+#            split_line = line.split()
+#            if split_line[0] == ip:
+#                mac_addr = split_line[3]
+#                break
+#
+#        f.close()
+#        return mac_addr
+
+    def clear_mac_addr_cache(self):
+        self.mac_addr_cache.clear()
+
+    def get_mac_addr_cache(self, ip):
+        if ip in self.mac_addr_cache:
+            return self.mac_addr_cache[ip]
+        return None
+
+    def add_mac_addr_cache(self, ip, mac_addr):
+        self.mac_addr_cache[ip] = mac_addr
+
+    def _request_arp(self, ip):
+        # README: requested arp not write system arp cache
+        #
+        # disable scapy module verbose
+        verb_conf = conf.verb
+        conf.verb = 0
+
+        # Run request arp up to three times.
+        mac_addr = ""
+        for i in xrange(3):
+            ans, uans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=ip), timeout=1)
+            for snd, rcv in ans:
+                result = rcv.sprintf(r"%ARP.psrc% %Ether.src%").split()
+                mac_addr = result[1]
+
+            if mac_addr != None and mac_addr != "":
+                break
+
+        # rollback scapy module verbose
+        conf.verb = verb_conf
+
+        if mac_addr == "":
+            return None
+
+        return mac_addr
+
+    def request_arp(self, ip):
+        """request mac address to system arp table """
+        addr = self.get_mac_addr_cache(ip)
+        if addr is None:
+            addr = self._request_arp(ip)
+            self.add_mac_addr_cache(ip, addr)
+
+        return addr

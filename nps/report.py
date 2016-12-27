@@ -3,7 +3,7 @@
 
 import os
 import codecs
-import nps.packet_info
+import nps.packet_buff
 
 
 CAPTURED_PACKET_REPORT_PATH = "/root/scapy/caputerd_packet.report"
@@ -27,9 +27,9 @@ class nps_report():
 
     def convert_received_packet2packet_Info(self, rawPacketDataList):
         for packet in rawPacketDataList:
-            packetInfo = packet_info.PacketInfo()
-            packetInfo.initialize(packet)
-            self.received_packet_info_list.append(packetInfo)
+            packetBuff = packet_buff.PacketBuff()
+            packetBuff.init(packet)
+            self.received_packet_info_list.append(packetBuff)
 
     def get_received_packet_list(self):
         return self.received_packet_info_list

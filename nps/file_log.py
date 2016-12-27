@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 
 import time
-from nps.packet_lib import TcpFlagInfo
+from nps.packet_buff import TcpFlagInfo
 
 NPS_DEBUG_LOG_FILE = "debug.log"
 NPS_REPORT_FILE_EXTENSION = ".rpt"
@@ -14,10 +14,11 @@ def make_packet_str(p, l):
     :param l:
     :return: ret
     """
-    tcpfunc = TcpFlagInfo()
+
+    tcpflag = TcpFlagInfo()
     ret = "%s(%s) -> [%s], Seq[%s], Ack[%s], len[%s]-> %s(%s)\n" % (
         str(p['IP'].src).center(15), str(p['TCP'].sport).center(5),
-        str(tcpfunc.flagnumber2char(p['TCP'].flags)).center(3),
+        str(tcpflag.flagnumber2char(p['TCP'].flags)).center(3),
         str(p['TCP'].seq).center(6), str(p['TCP'].ack).center(6),
         str(l).center(5), str(p['IP'].dst).center(15),
         str(p['TCP'].dport).center(5))
