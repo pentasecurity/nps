@@ -16,4 +16,5 @@ clean:
 	find nps/ -name "*.pyc" -exec rm -f {} \;
 
 test:
-	@echo "TODO:unit testing"
+	@echo "start nps unit testing ..."
+	python -m unittest discover tests "*.py"
