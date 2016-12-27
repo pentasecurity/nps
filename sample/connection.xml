@@ -1,0 +1,72 @@
+<tc name="connection">
+
+<client interface="eth0">
+ <packet>
+  <action>send</action>
+  <step>connection_open</step>
+  <eth>
+   <src>aa:00:00:00:00:01</src>
+   <dest>aa:00:00:00:00:02</dest>
+  </eth>
+  <ip>
+   <src>1.1.1.1</src>
+   <dest>2.2.2.2</dest>
+  </ip>
+  <tcp>
+   <srcPort>5555</srcPort>
+   <destPort>80</destPort>
+   <flag>syn</flag>
+   <mss>1460</mss>
+   <seq>0</seq>
+   <ack>0</ack>
+   <sackPerm>true</sackPerm>
+  </tcp>
+ </packet>
+
+ <packet>
+  <action>recv</action>
+  <step>connection_open</step>
+  <eth>
+   <src>aa:00:00:00:00:02</src>
+   <dest>aa:00:00:00:00:01</dest>
+  </eth>
+  <ip>
+   <src>2.2.2.2</src>
+   <dest>1.1.1.1</dest>
+  </ip>
+  <tcp>
+   <srcPort>80</srcPort>
+   <destPort>5555</destPort>
+   <flag>syn+ack</flag>
+   <mss>1460</mss>
+   <seq>0</seq>
+   <ack>1</ack>
+   <sackPerm>true</sackPerm>
+  </tcp>
+ </packet>
+
+ <packet>
+  <action>send</action>
+  <step>connection_open</step>
+  <eth>
+   <src>aa:00:00:00:00:01</src>
+   <dest>aa:00:00:00:00:02</dest>
+  </eth>
+  <ip>
+   <src>1.1.1.1</src>
+   <dest>2.2.2.2</dest>
+  </ip>
+  <tcp>
+   <srcPort>5555</srcPort>
+   <destPort>80</destPort>
+   <flag>syn</flag>
+   <mss>1460</mss>
+   <seq>1</seq>
+   <ack>1</ack>
+   <sackPerm>true</sackPerm>
+  </tcp>
+ </packet>
+
+</client>
+
+</tc>

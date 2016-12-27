@@ -1,0 +1,61 @@
+<tc name="connection2">
+
+<accessibility>
+ <addressBinding>
+  <client>
+   <interface>eth0</interface>
+   <source>
+    <mac value="interface"/>
+    <ip>192.168.40.119</ip>
+    <port>12345</port>
+   </source>
+   <destination>
+    <mac value="arp"/>
+    <ip>192.168.40.114</ip>
+    <port>80</port>
+   </destination>
+  </client>
+ </addressBinding>
+</accessibility>
+
+<client>
+ <packet>
+  <action>send</action>
+  <step>connection_open</step>
+  <tcp>
+   <flag>syn</flag>
+   <mss>1460</mss>
+   <seq>0</seq>
+   <ack>0</ack>
+   <sackPerm>true</sackPerm>
+  </tcp>
+ </packet>
+
+ <packet>
+  <action>recv</action>
+  <step>connection_open</step>
+  <tcp>
+   <flag>syn+ack</flag>
+   <mss>1460</mss>
+   <seq>0</seq>
+   <ack>1</ack>
+   <sackPerm>true</sackPerm>
+  </tcp>
+ </packet>
+
+ <packet>
+  <action>send</action>
+  <step>connection_open</step>
+  <delay>100</delay>
+  <tcp>
+   <flag>syn</flag>
+   <mss>1460</mss>
+   <seq>1</seq>
+   <ack>1</ack>
+   <sackPerm>true</sackPerm>
+  </tcp>
+ </packet>
+
+</client>
+
+</tc>
