@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import sys
+import os.path
 import optparse
 import time
 import threading
@@ -41,7 +42,7 @@ def process_main(network_entity, ):
 
     simulation_thread.join()
 
-    # sniff function of recv_thread does not terminate.
+    # XXX:sniff function of recv_thread does not terminate.
     # to terminate sniff, use the stop_filter of the sniff function.
     # need an idea of stop_filter implementation.
     #
@@ -49,8 +50,9 @@ def process_main(network_entity, ):
 
 
 def main():
-    parser = optparse.OptionParser('%prog -f <TC file name>')
-    parser.add_option('-f', dest='tc_filename', type='string', help='TC file name')
+    parser = optparse.OptionParser('%prog -d <TC directory> -f <TC file name>')
+    parser.add_option('-d', dest='tc_directory', type='string', help='Test case directory')
+    parser.add_option('-f', dest='tc_filename', type='string', help='Test case filename')
 
     (options, args) = parser.parse_args()
 
@@ -58,13 +60,23 @@ def main():
         parser.print_help()
         exit(0)
 
+    if options.tc_directory is None:
+        # default value local directory
+        options.tc_directory = "."
+
     if options.tc_filename is None:
-        print('TC file is not exist.')
-        exit(0)
+        print("Need test case filename.")
+        exit(-1)
+
+    full_tc_filename = options.tc_directory + '/' + options.tc_filename
+    if os.path.exists(full_tc_filename) == False:
+        print("%s file is not exist." % full_tc_filename)
+        exit(-1)
 
     mac_addr_helper = MacAddressHelper()
     accessibility_manager = AccessibilityManager()
-    parser = XmlTestCaseParser(mac_addr_helper, accessibility_manager)
+    parser = XmlTestCaseParser(options.tc_directory,
+                                mac_addr_helper, accessibility_manager)
 
     server = NetworkEntity("server")
     client = NetworkEntity("client")

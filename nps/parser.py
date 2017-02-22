@@ -4,26 +4,31 @@ from nps.packet_buff import PacketBuff
 from nps.accessibility import AddressBinder, TcListAutoSeqAck
 
 
-TC_SERVER_NODE = "server"
-TC_CLIENT_NODE = "client"
-TC_ACCESSIBILLITY_NODE = "accessibility"
-
-TC_AUTOFILL_TCP_SEQ = "autoFillSeqAck"
-
-XML_EXTENTION = ".xml"
-SCRIPT_BASE_PATH = "/opt/penta/nps/script/"
-TCP_DATA_BASE_PATH = "/opt/penta/nps/script/tcpData/"
-COMMON_SCRIPT_BASE_PATH = "/opt/penta/nps/script/include/"
-
-
 class XmlTestCaseParser():
-    def __init__(self, mac_addr_helper, ac_manager):
-        # verbose variable
-        self.print_entity_packetlist = False
-        self.print_tc_preprocessing = False
+    XML_EXTENTION = ".xml"
+    TC_SERVER_NODE = "server"
+    TC_CLIENT_NODE = "client"
+    TC_ACCESSIBILLITY_NODE = "accessibility"
+    TC_AUTOFILL_TCP_SEQ = "autoFillSeqAck"
+
+    def __init__(self, tc_dir,  mac_addr_helper, ac_manager):
+        # set directory
+        self.script_base_dir = tc_dir
+        self.common_data_dir = self.script_base_dir + "/data/"
+        self.common_script_dir = self.script_base_dir + "/include/"
 
         self.accessbility_manager = ac_manager
         self.mac_addr_helper = mac_addr_helper
+
+        # verbose variable for debuggin
+        self.print_entity_packetlist = False
+        self.print_tc_preprocessing = False
+
+    def get_common_script_dir(self):
+        return self.common_script_dir
+
+    def get_data_base_dir(self):
+        return self.common_data_dir
 
     def __get_xml_root_by_file(self, filename):
         """xml file open"""
@@ -47,7 +52,7 @@ class XmlTestCaseParser():
                 elem.tail = i
 
     def __get_tcp_data_from_file(self, fileName):
-        f = open(TCP_DATA_BASE_PATH + fileName, "r")
+        f = open(self.common_data_dir + fileName, "r")
 
         data = ""
         for line in f.readlines():
@@ -57,7 +62,7 @@ class XmlTestCaseParser():
         return data
 
     def analyze_tc_file(self, filename, client_entity, server_entity):
-        root_node = self.__get_xml_root_by_file(SCRIPT_BASE_PATH + filename)
+        root_node = self.__get_xml_root_by_file(self.script_base_dir + filename)
 
         self._analyze_tc(root_node, client_entity, server_entity)
 
@@ -74,13 +79,13 @@ class XmlTestCaseParser():
 
     def _analyze_tc(self, root, client_entity, server_entity):
         for child in root.getchildren():
-            if child.tag == TC_CLIENT_NODE:
+            if child.tag == XmlTestCaseParser.TC_CLIENT_NODE:
                 self._analyze_entity_node(child, client_entity)
 
-            elif child.tag == TC_SERVER_NODE:
+            elif child.tag == XmlTestCaseParser.TC_SERVER_NODE:
                 self._analyze_entity_node(child, server_entity)
 
-            elif child.tag == TC_ACCESSIBILLITY_NODE:
+            elif child.tag == XmlTestCaseParser.TC_ACCESSIBILLITY_NODE:
                 self._analyze_accessbility_node(child, client_entity, server_entity)
 
     def _analyze_entity_node(self, node, entity):
@@ -105,9 +110,9 @@ class XmlTestCaseParser():
     def __add_include_to_packet_node(self, packet_node):
         include_nodes = packet_node.findall("include")
         for include_node in include_nodes:
-            include_root_node = self.__get_xml_root_by_file(COMMON_SCRIPT_BASE_PATH +
+            include_root_node = self.__get_xml_root_by_file(common_script_dir +
                                                             include_node.text +
-                                                            XML_EXTENTION)
+                                                            XmlTestCaseParser.XML_EXTENTION)
 
             # "include" tag allow object root node only
             if include_root_node.tag != "object":
@@ -202,7 +207,7 @@ class XmlTestCaseParser():
         if tcp_node.findtext("tcpDataFile") != None:
             tcp_data_node = tcp_node.findtext("tcpDataFile")
             packet_buff.set_raw_data(self.__get_tcp_data_from_file(tcp_data_node.text))
-            packet_buff.set_file_size(TCP_DATA_BASE_PATH, tcp_data_node.text)
+            packet_buff.set_file_size(self.common_data_dir, tcp_data_node.text)
 
         if tcp_node.findtext("tcpDataInfo") != None:
             # TODO: refactoring => set_raw_data
@@ -211,7 +216,7 @@ class XmlTestCaseParser():
             for child in tcp_info_node.getchildren():
                 if child.tag == "fileName":
                     packet_buff.set_raw_data(self.__get_tcp_data_from_file(child.text))
-                    packet_buff.set_file_size(TCP_DATA_BASE_PATH, child.text)
+                    packet_buff.set_file_size(self.common_data_dir, child.text)
                 elif child.tag == "index":
                     packet_buff.set_tcp_index(child.text)
                 elif child.tag == "length":
