@@ -1,16 +1,15 @@
 NPS
 ======
 
-[PentaSecurity](https://pentasecurity.com) tcp/ip packet simulator.
+[PentaSecurity](https://pentasecurity.com) TCP/IP packet simulator.
 
 
 ## Description
-NPS(Network Packet Simulator) is tcp/ip packet testing tool.
+NPS(Network Packet Simulator) is a TCP/IP packet testing tool.
 
-* Useful that validation inline(or transparent) network appliance.
-* Useful that tcp/ip function of server.
-* Support packet sender and reflector by TC of xml base.
-* Only support TCP/IP protocol.
+* Useful for validating an inline(or transparent) network appliance.
+* Supports packet sender and reflector by TC of xml base.
+* Only supports TCP/IP protocol.
 
 
 ```
